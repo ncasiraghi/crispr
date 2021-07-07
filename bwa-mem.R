@@ -3,11 +3,11 @@ wd <- '/BCGLAB/darosio_crispr'
 
 setwd(wd)
 
-fasta <- file.path(wd,'reference/pires-puro3-0-egfp-nostro.fasta')
+fasta <- file.path(wd,'reference/egfp.fasta')
 
-fastq_files <- list.files(file.path(wd,'fastq'),full.names = TRUE,pattern = '_L001_R1_001.fastq.gz$')[1]
+fastq_files <- list.files(file.path(wd,'fastq'),full.names = TRUE,pattern = '_L001_R1_001.fastq.gz$')
 
-if(FALSE){
+if(TRUE){
   cmd <- paste('bwa index',fasta) 
   system(cmd)
 }
@@ -23,7 +23,7 @@ for(fastq in fastq_files){
   system(cmd)
   
   sorted.bam <- file.path(wd,'bam',paste0(unlist(strsplit(basename(fastq),split = '_'))[1],'.sorted.bam'))
-  cmd <- paste('samtools sort',bam,'-o',sorted.bam)
+  cmd <- paste('samtools sort','-o',sorted.bam,bam)
   system(cmd)
 
   cmd <- paste('samtools index',sorted.bam)

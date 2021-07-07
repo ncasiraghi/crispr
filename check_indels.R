@@ -146,11 +146,24 @@ ggsave(filename = 'pdf/DI_starts_no_single.pdf', plot = p, width = 210,height = 
 # heatmap
 
 mat <- matrix(data = 0,nrow = 5,ncol = nchar(fasta))
-
 row.names(mat) <- unique(df.indels$sample)
+
+mat_nos <- matrix(data = 0,nrow = 5,ncol = nchar(fasta))
+row.names(mat_nos) <- unique(df.indels$sample)
 
 for(id in unique(df.indels$sample)){
   message(id)
+  
+  h <- df.indels %>% 
+    filter(sample == id)
+  
+  for(idx in seq_len(nrow(h))){
+    
+    x <- sort(h$start[idx]:h$end[idx])
+    
+    mat[id,x] <- mat[id,x] + 1 
+    
+  }
   
   h <- df.indels %>% 
     filter(sample == id) %>% 
@@ -160,7 +173,7 @@ for(id in unique(df.indels$sample)){
     
     x <- sort(h$start[idx]:h$end[idx])
     
-    mat[id,x] <- mat[id,x] + 1 
+    mat_nos[id,x] <- mat_nos[id,x] + 1 
     
   }
   
@@ -179,13 +192,43 @@ for(id in unique(rownames(mat))){
   
 }
 
-head(mydata)
+p <- ggplot(data=mydata, aes(x=pos, y=value)) +
+  geom_bar(stat="identity",fill='grey60',color='grey60',width = 1) +
+  facet_wrap(~sample,nrow = 5) + xlim(100,300) +
+  geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
+  geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Positions covered by a D,I events')
+
+ggsave(filename = 'pdf/DI_pos_covered.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+
+# only DI with width > 1
+
+mydata <- c()
+
+for(id in unique(rownames(mat_nos))){
+  
+  df <- data.frame(sample = id,
+                   value = as.numeric(mat_nos[id,]),
+                   pos = seq_len(ncol(mat_nos)),
+                   stringsAsFactors = FALSE)
+  
+  mydata <- rbind(mydata,df)
+  
+}
 
 p <- ggplot(data=mydata, aes(x=pos, y=value)) +
   geom_bar(stat="identity",fill='grey60',color='grey60',width = 1) +
   facet_wrap(~sample,nrow = 5) + xlim(100,300) +
   geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
-  geom_vline(xintercept = 202,color = "#006837", size=0.4) 
+  geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Positions covered by a D,I events with width > 1')
 
-ggsave(filename = 'pdf/DI_pos_covered_no_single.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+ggsave(filename = 'pdf/DI_pos_covered_no_singles.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+
+
+
+
+
+
+
 
