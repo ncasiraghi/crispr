@@ -83,33 +83,71 @@ p <- ggplot(data=all, aes(x=sample, y=n)) +
 
 ggsave(filename = 'pdf/all_reads.pdf', plot = p, width = 150,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
-cnt <- df.reads %>%
+p <- df.reads %>%
   group_by(sample) %>%
-  summarise(n = n())
-
-p <- ggplot(data=cnt, aes(x=sample, y=n)) +
+  summarise(n = n()) %>% 
+  ggplot(., aes(x=sample, y=n)) +
   geom_bar(stat="identity") + ylab('Number of reads') + ggtitle('Selected reads with D or I in CIGAR [ mapq > 30 ]')
 
 ggsave(filename = 'pdf/DI_reads_cnt.pdf', plot = p, width = 150,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
-cnt$n <- cnt$n / all$n
-
-p <- ggplot(data=cnt, aes(x=sample, y=n)) +
+p <- df.reads %>%
+  group_by(sample) %>%
+  summarise(n = n()) %>% 
+  left_join(.,all,by='sample',suffix = c('_reads','_all')) %>% 
+  mutate(fraction = n_reads/n_all) %>% 
+  ggplot(., aes(x=sample, y=fraction)) +
   geom_bar(stat="identity") + ylab('Fraction of reads') + ggtitle('Selected reads with D or I in CIGAR [ mapq > 30 ]')
 
 ggsave(filename = 'pdf/DI_reads_frc.pdf', plot = p, width = 150,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
-# distribution of indels length
+# distribution frequency
 
-m <- df.indels %>%
+tot <- df.indels %>% 
+  group_by(sample) %>% 
+  summarise(total = n())
+
+p <- df.indels %>% 
+  mutate(id = paste(start,end,names,tot.width,sep = ':')) %>% 
+  group_by(id,sample) %>% 
+  summarise(n = n()) %>% 
+  left_join(.,tot,by = 'sample') %>% 
+  mutate(freq = n/total) %>% 
+  ggplot(.,aes(x=sample,y=freq)) +
+  geom_boxplot(varwidth = TRUE) +
+  coord_cartesian(ylim=c(0,0.002)) + ggtitle('D,I events frequency')
+
+ggsave(filename = 'pdf/DI_events_frequency.pdf', plot = p, width = 150,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+
+# count events
+
+p <- df.indels %>% 
   group_by(sample,names) %>% 
-  summarise(n = n(), mean_width = mean(tot.width), median_width = median(tot.width))
-
-p <- ggplot(m, aes(x=sample, y=n)) +
-  geom_bar(stat="identity") + ylab('number of events') + 
-  facet_wrap(~names)
+  summarise(n = n()) %>% 
+  ggplot(., aes(x=sample, y=n)) +
+  geom_bar(stat="identity",position="dodge") + ylab('Number of events') + 
+  facet_wrap(~names) 
 
 ggsave(filename = 'pdf/DI_count_events.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+tot <- df.indels %>% 
+  group_by(sample) %>% 
+  summarise(total = n())
+
+p <- df.indels %>% 
+  group_by(sample,names) %>% 
+  summarise(n = n()) %>%
+  left_join(.,tot,by = 'sample') %>% 
+  mutate(fraction = n/total) %>% 
+  ggplot(., aes(x=sample, y=fraction)) +
+  geom_bar(stat="identity",position="dodge") + ylab('Fraction of events') + ylim(0,1) +
+  facet_wrap(~names) 
+
+ggsave(filename = 'pdf/DI_fraction_events.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+
+# widths
 
 p <- ggplot(df.indels, aes(x=sample, y=tot.width)) + 
   geom_boxplot(varwidth = TRUE) +
@@ -117,7 +155,7 @@ p <- ggplot(df.indels, aes(x=sample, y=tot.width)) +
 
 ggsave(filename = 'pdf/DI_widths.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
-# 
+# locate events
 
 fasta <- readLines('/BCGLAB/darosio_crispr/reference/egfp.fasta')
 fasta <- paste(grep(fasta,pattern = '^>',invert = TRUE,value = TRUE),collapse = "")
@@ -125,19 +163,19 @@ fasta <- str_to_upper(fasta)
 
 nchar(fasta)
 
-df.indels <- df.indels %>% mutate(start = start + 1)
+zb <- df.indels %>% mutate(start = start + 1)
 
-p <- ggplot(df.indels, aes(x=start)) + 
+p <- ggplot(zb, aes(x=start)) + 
   geom_histogram(binwidth=1) +
-  facet_wrap(~sample,nrow = 5) + xlim(100,300) +
+  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(100,300)) +
   geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
   geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Starting position of D,I events')
 
 ggsave(filename = 'pdf/DI_starts.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
-p <- ggplot(df.indels %>% filter(tot.width > 1), aes(x=start)) + 
+p <- ggplot(zb %>% filter(tot.width > 1), aes(x=start)) + 
   geom_histogram(binwidth=1) +
-  facet_wrap(~sample,nrow = 5) + xlim(100,300) +
+  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(100,300)) +
   geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
   geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Starting position of D,I events with width > 1')
 
@@ -145,80 +183,63 @@ ggsave(filename = 'pdf/DI_starts_no_single.pdf', plot = p, width = 210,height = 
 
 # heatmap
 
-mat <- matrix(data = 0,nrow = 5,ncol = nchar(fasta))
-row.names(mat) <- unique(df.indels$sample)
 
-mat_nos <- matrix(data = 0,nrow = 5,ncol = nchar(fasta))
-row.names(mat_nos) <- unique(df.indels$sample)
-
-for(id in unique(df.indels$sample)){
-  message(id)
+getIndelsCov <- function(zb,min.width=1){
   
-  h <- df.indels %>% 
-    filter(sample == id)
+  mat <- matrix(data = 0,nrow = 5,ncol = nchar(fasta))
+  row.names(mat) <- unique(zb$sample)
   
-  for(idx in seq_len(nrow(h))){
+  for(id in unique(zb$sample)){
     
-    x <- sort(h$start[idx]:h$end[idx])
+    message(id)
     
-    mat[id,x] <- mat[id,x] + 1 
+    h <- zb %>% 
+      filter(sample == id) %>% 
+      filter(tot.width >= min.width)
     
-  }
-  
-  h <- df.indels %>% 
-    filter(sample == id) %>% 
-    filter(tot.width > 1)
-  
-  for(idx in seq_len(nrow(h))){
-    
-    x <- sort(h$start[idx]:h$end[idx])
-    
-    mat_nos[id,x] <- mat_nos[id,x] + 1 
+    for(idx in seq_len(nrow(h))){
+      
+      x <- sort(h$start[idx]:h$end[idx])
+      
+      mat[id,x] <- mat[id,x] + 1 
+      
+    }
     
   }
   
+  mydata <- c()
+  
+  for(id in unique(rownames(mat))){
+    
+    df <- data.frame(sample = id,
+                     value = as.numeric(mat[id,]),
+                     pos = seq_len(ncol(mat)),
+                     stringsAsFactors = FALSE)
+    
+    mydata <- rbind(mydata,df)
+    
+  }
+  
+  return(mydata)
+  
 }
 
-mydata <- c()
 
-for(id in unique(rownames(mat))){
+covdata <- getIndelsCov(zb = zb,min.width = 1)
 
-  df <- data.frame(sample = id,
-                   value = as.numeric(mat[id,]),
-                   pos = seq_len(ncol(mat)),
-                   stringsAsFactors = FALSE)
-  
-  mydata <- rbind(mydata,df)
-  
-}
-
-p <- ggplot(data=mydata, aes(x=pos, y=value)) +
-  geom_bar(stat="identity",fill='grey60',color='grey60',width = 1) +
-  facet_wrap(~sample,nrow = 5) + xlim(100,300) +
+p <- ggplot(covdata, aes(x=pos, y=value)) +
+  geom_bar(stat="identity",fill='grey50',color='grey50',width = 1) +
+  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(100,300)) +
   geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
   geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Positions covered by a D,I events')
 
 ggsave(filename = 'pdf/DI_pos_covered.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
-
-# only DI with width > 1
-
-mydata <- c()
-
-for(id in unique(rownames(mat_nos))){
-  
-  df <- data.frame(sample = id,
-                   value = as.numeric(mat_nos[id,]),
-                   pos = seq_len(ncol(mat_nos)),
-                   stringsAsFactors = FALSE)
-  
-  mydata <- rbind(mydata,df)
-  
-}
+covdata <- getIndelsCov(zb = zb,min.width = 2)
 
 p <- ggplot(data=mydata, aes(x=pos, y=value)) +
-  geom_bar(stat="identity",fill='grey60',color='grey60',width = 1) +
-  facet_wrap(~sample,nrow = 5) + xlim(100,300) +
+  geom_bar(stat="identity",fill='grey50',color='grey50',width = 1) +
+  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(100,300)) +
   geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
   geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Positions covered by a D,I events with width > 1')
 
