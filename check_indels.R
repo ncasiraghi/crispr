@@ -167,7 +167,7 @@ zb <- df.indels %>% mutate(start = start + 1)
 
 p <- ggplot(zb, aes(x=start)) + 
   geom_histogram(binwidth=1) +
-  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(100,300)) +
+  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(144,537)) +
   geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
   geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Starting position of D,I events')
 
@@ -175,7 +175,7 @@ ggsave(filename = 'pdf/DI_starts.pdf', plot = p, width = 210,height = 150,dpi = 
 
 p <- ggplot(zb %>% filter(tot.width > 1), aes(x=start)) + 
   geom_histogram(binwidth=1) +
-  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(100,300)) +
+  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(144,537)) +
   geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
   geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Starting position of D,I events with width > 1')
 
