@@ -3,6 +3,8 @@ library(tidyverse)
 
 setwd('/BCGLAB/darosio_crispr/out/')
 
+nick <- data.frame(sample = c('D10A','L-16','L-JON','L-PUC'), site = c(202,202,154,154),stringsAsFactors = F)
+
 ## This code was designed for BAM files aligned against a specific reference genome "amplicons-deepseq.fasta"
 ## BAM files should be first sorted by read position and indexed with SAMTools
 
@@ -21,7 +23,9 @@ getIndels <- function(i,reads){
   tab$start <- tab$start + pos
   tab$end <- tab$end + pos
 
-  out <- tab %>% filter(names %in% c('D','I'))
+  out <- tab %>% 
+    filter(names %in% c('D','I')) %>% 
+    mutate(qname = reads$qname[i])
   
   return(out)
 
@@ -41,7 +45,7 @@ for(file.bam in bamlist){
   
   id <- gsub(basename(file.bam),pattern = '.sorted.bam',replacement = '')
   
-  param <- ScanBamParam(flag=scanBamFlag(isUnmappedQuery=FALSE,isDuplicate=NA),what=c("rname", "pos", "cigar","mapq"))
+  param <- ScanBamParam(flag=scanBamFlag(isUnmappedQuery=FALSE,isDuplicate=NA),what=c("rname", "qname","pos", "cigar","mapq"))
   bam <- scanBam(file.bam, param=param)[[1]]
   
   tot.reads <- as.data.frame(bam) %>% 
@@ -73,6 +77,8 @@ df.indels <- do.call(rbind,df.indels)
 save(df.totals,df.indels,df.reads,file = file.path('/BCGLAB/darosio_crispr/out/data_indels.RData'),compress = TRUE)
 
 # load('/BCGLAB/darosio_crispr/out/data_indels.RData')
+if(FALSE){
+  
 
 all <- df.totals %>%
   group_by(sample) %>%
@@ -114,11 +120,9 @@ p <- df.indels %>%
   left_join(.,tot,by = 'sample') %>% 
   mutate(freq = n/total) %>% 
   ggplot(.,aes(x=sample,y=freq)) +
-  geom_boxplot(varwidth = TRUE) +
-  coord_cartesian(ylim=c(0,0.002)) + ggtitle('D,I events frequency')
+  geom_boxplot(varwidth = TRUE) + ggtitle('D,I events frequency (an event is defined as start:end:D/I:width)')
 
 ggsave(filename = 'pdf/DI_events_frequency.pdf', plot = p, width = 150,height = 150,dpi = 300,units = 'mm',device = 'pdf')
-
 
 # count events
 
@@ -149,7 +153,8 @@ ggsave(filename = 'pdf/DI_fraction_events.pdf', plot = p, width = 210,height = 1
 
 # widths
 
-p <- ggplot(df.indels, aes(x=sample, y=tot.width)) + 
+p <- df.indels %>% 
+  ggplot(., aes(x=sample, y=tot.width)) + 
   geom_boxplot(varwidth = TRUE) +
   facet_wrap(~names) + ylab('width')
 
@@ -157,25 +162,28 @@ ggsave(filename = 'pdf/DI_widths.pdf', plot = p, width = 210,height = 150,dpi = 
 
 # locate events
 
-fasta <- readLines('/BCGLAB/darosio_crispr/reference/egfp.fasta')
+fasta <- readLines('/BCGLAB/darosio_crispr/reference/bwa_reference/egfp.fasta')
 fasta <- paste(grep(fasta,pattern = '^>',invert = TRUE,value = TRUE),collapse = "")
 fasta <- str_to_upper(fasta)
 
 nchar(fasta)
 
-zb <- df.indels %>% mutate(start = start + 1)
+zb <- df.indels %>% 
+  filter(sample != 'Undetermined') %>% 
+  mutate(start = start + 1, end = end + 1)
 
 p <- ggplot(zb, aes(x=start)) + 
   geom_histogram(binwidth=1) +
-  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(144,537)) +
-  geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
-  geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Starting position of D,I events')
+  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(121,322)) +
+  geom_vline(xintercept = c(121,143),size=0.2) +
+  geom_vline(aes(xintercept = site), nick,linetype="dotted",size=0.4) + ggtitle('Starting position of D,I events')
 
 ggsave(filename = 'pdf/DI_starts.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
 p <- ggplot(zb %>% filter(tot.width > 1), aes(x=start)) + 
   geom_histogram(binwidth=1) +
-  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(144,537)) +
+  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(121,558)) +
+  geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
   geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
   geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Starting position of D,I events with width > 1')
 
@@ -183,10 +191,9 @@ ggsave(filename = 'pdf/DI_starts_no_single.pdf', plot = p, width = 210,height = 
 
 # heatmap
 
-
 getIndelsCov <- function(zb,min.width=1){
   
-  mat <- matrix(data = 0,nrow = 5,ncol = nchar(fasta))
+  mat <- matrix(data = 0,nrow = 4,ncol = nchar(fasta))
   row.names(mat) <- unique(zb$sample)
   
   for(id in unique(zb$sample)){
@@ -229,7 +236,8 @@ covdata <- getIndelsCov(zb = zb,min.width = 1)
 
 p <- ggplot(covdata, aes(x=pos, y=value)) +
   geom_bar(stat="identity",fill='grey50',color='grey50',width = 1) +
-  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(100,300)) +
+  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(121,558)) +
+  geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
   geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
   geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Positions covered by a D,I events')
 
@@ -237,9 +245,10 @@ ggsave(filename = 'pdf/DI_pos_covered.pdf', plot = p, width = 210,height = 150,d
 
 covdata <- getIndelsCov(zb = zb,min.width = 2)
 
-p <- ggplot(data=mydata, aes(x=pos, y=value)) +
+p <- ggplot(data=covdata, aes(x=pos, y=value)) +
   geom_bar(stat="identity",fill='grey50',color='grey50',width = 1) +
-  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(100,300)) +
+  facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(121,558)) +
+  geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
   geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
   geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Positions covered by a D,I events with width > 1')
 
@@ -248,6 +257,7 @@ ggsave(filename = 'pdf/DI_pos_covered_no_singles.pdf', plot = p, width = 210,hei
 
 
 
+}
 
 
 
