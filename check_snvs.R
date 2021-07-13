@@ -1,6 +1,9 @@
 library(tidyverse)
+library(ggpubr)
 
 setwd('/BCGLAB/darosio_crispr/out/')
+
+nick <- data.frame(sample = c('D10A','L-16','L-JON','L-PUC'), site = c(202,202,154,154),stringsAsFactors = F)
 
 ps <- list.files('/BCGLAB/darosio_crispr/pacbam',pattern = '\\.pileup$',full.names = TRUE)
 
@@ -13,65 +16,104 @@ for(p in ps){
   df <- rbind(df,m)
 }
 
-head(df)
+df <- df %>% filter(sample != 'Undetermined')
 
-m <- df %>% 
-  filter(sample != 'Undetermined') %>% 
-  filter(cov > 5000) %>% 
+# coverage
+p <- ggplot(df, aes(x=pos, y=cov)) +
+  geom_bar(stat="identity",fill='grey70',color='grey70',width = 1) +
+  coord_cartesian(xlim=c(121,558)) +
+  geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
+  facet_wrap(~sample,nrow = 4)
+
+ggsave(filename = 'pdf/samples_coverage.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+dat <- df %>%
+  filter(cov >= 75e4) %>% 
   gather(base,base_cov,4:7) %>% 
   arrange(pos,sample,base) %>% 
   mutate(base_af = base_cov/cov) %>% 
-  filter(base != ref)
+  filter(ref != base) %>% 
+  mutate(site = case_when(sample %in% c('L-JON','L-PUC') ~ 154, sample %in% c('D10A','L-16') ~ 202)) %>% 
+  mutate(location = case_when(sample %in% c('L-JON','L-PUC') & pos <= site ~ 'R1',
+                              sample %in% c('L-JON','L-PUC') & pos > site ~ 'R2',
+                              sample %in% c('L-16','D10A') & pos <= site ~ 'R1',
+                              sample %in% c('L-16','D10A') & pos > site ~ 'R2')) %>% 
+  unite('region',sample,location,remove = FALSE)
 
-ctrl <- m %>% filter(sample == 'L-PUC')
-  
-case <- m %>% filter(sample != 'L-PUC')
-  
-case$pt.pvalue <- NA
-
-for(i in seq_len(nrow(case))){
-  
-  a <- ctrl %>% 
-    filter(pos == case$pos[i]) %>% 
-    filter(base == case$base[i])
-  
-  # permutation test
-  
-  x <- c(a$base_cov, case$base_cov[i])
-  
-  n <- c(a$cov, case$cov[i])
-  
-  pt <- prop.test(x=x,n=n)
-  
-  case$pt.pvalue[i] <- pt$p.value
-  
-}
-
-case$p.adjust <- p.adjust(case$pt.pvalue,method = 'fdr')
-
-m <- case %>% filter(p.adjust <= 0.01)
-
-m %>% 
-  group_by(sample) %>% 
-  summarise(n = n_distinct(pos))
-
-ggplot(data=m, aes(x=pos, y=cov)) +
-  geom_bar(stat="identity",fill='grey50',color='grey50',width = 1) +
-  facet_wrap(~sample,nrow = 4) +
-  geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
-  geom_vline(xintercept = 202,color = "#006837", size=0.4)
-
-ggplot(data=m, aes(x=pos, y=base_af, fill=base)) +
+p <- ggplot(dat, aes(x=pos, y=base_af, fill=base)) +
   geom_bar(stat="identity",width = 1) +
-  coord_cartesian(ylim=c(0,0.003)) +
-  facet_wrap(~sample,nrow = 4) +
-  geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
-  geom_vline(xintercept = 202,color = "#006837", size=0.4)
+  coord_cartesian(ylim=c(0,0.003), xlim=c(121,322)) +
+  geom_vline(aes(xintercept = site), nick,linetype="dotted",size=0.4) +
+  facet_wrap(~sample,nrow = 4) 
 
-ggplot(data=m, aes(x=pos, y=base_af, fill=base)) +
-  geom_bar(stat="identity",width = 1) +
-  coord_cartesian(ylim=c(0,0.003)) +
-  facet_wrap(~sample,nrow = 4) +
-  geom_vline(xintercept = 154,color = "#b2182b", size=0.4) +
-  geom_vline(xintercept = 202,color = "#006837", size=0.4)
+ggsave(filename = 'pdf/samples_afs_base.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+ctrl <- df %>% 
+  filter(sample == 'L-PUC') %>% 
+  select(chr,pos,ref,af,cov)
+
+delta <- left_join(df,ctrl,by = c('chr','pos','ref'),suffix = c('_case','_ctrl')) %>% 
+  mutate(delta_af = af_case - af_ctrl) %>% 
+  filter(cov_case >= 75e4)
+  
+p <- ggplot(delta, aes(x=pos, y=af_case))+
+  geom_line() +
+  coord_cartesian(xlim=c(121,322)) +
+  geom_vline(aes(xintercept = site), nick, linetype="dotted",size=0.4) +
+  facet_wrap(~sample,nrow = 4) 
+
+ggsave(filename = 'pdf/samples_afs.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+p <- ggplot(delta %>% filter(sample != 'L-PUC'), aes(x=pos, y=delta_af))+
+  geom_line() +
+  coord_cartesian(xlim=c(121,322)) +
+  geom_vline(aes(xintercept = site), nick %>% filter(sample != 'L-PUC'), linetype="dotted",size=0.4) +
+  facet_wrap(~sample,nrow = 4) 
+
+ggsave(filename = 'pdf/samples_delta_afs.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+my_comparisons <- list(c('D10A','L-PUC'),
+                       c('L-16','L-PUC'),
+                       c('L-JON','L-PUC'))
+
+p <- ggboxplot(dat, x = "sample", y = "base_af", color = "sample", palette = "jco") + 
+  stat_compare_means(comparisons = my_comparisons) +
+  stat_compare_means(label.y = 0.003)
+
+ggsave(filename = 'pdf/samples_kruskal_wallis.pdf', plot = p, width = 150,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+my_comparisons <- list(c('D10A_R1','D10A_R2'),
+                       c('L-16_R1','L-16_R2'),
+                       c('L-JON_R1','L-JON_R2'),
+                       c('L-PUC_R1','L-PUC_R2'))
+
+p <- ggboxplot(dat %>% filter(!is.na(location)), x = "region", y = "base_af", color = "sample", palette = "jco",order = sort(unique(dat$region))) + 
+  stat_compare_means(comparisons = my_comparisons) +
+  stat_compare_means(label.y = 0.003)
+
+ggsave(filename = 'pdf/samples_kruskal_wallis_up_down_sites.pdf', plot = p, width = 250,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+# define regions
+
+wnd <- 10
+
+reg <- df %>%
+  filter(cov >= 75e4) %>% 
+  gather(base,base_cov,4:7) %>% 
+  arrange(pos,sample,base) %>% 
+  mutate(base_af = base_cov/cov) %>% 
+  filter(ref != base) %>% 
+  mutate(site = case_when(sample %in% c('L-JON','L-PUC') ~ 154, sample %in% c('D10A','L-16') ~ 202)) %>% 
+  mutate(location = case_when(sample %in% c('L-JON','L-PUC') & pos <= site & pos > site - wnd ~ 'R1',
+                              sample %in% c('L-JON','L-PUC') & pos <= (site + wnd) & pos > site ~ 'R2',
+                              sample %in% c('L-16','D10A') & pos <= site & pos > (site - wnd) ~ 'R1',
+                              sample %in% c('L-16','D10A') & pos <= (site + wnd) & pos > site ~ 'R2')) %>% 
+  unite('region',sample,location,remove = FALSE)
+
+p <- ggboxplot(reg %>% filter(!is.na(location)), x = "region", y = "base_af", color = "sample", palette = "jco",title = paste('Regions length =',wnd),order = sort(unique(dat$region))) + 
+  stat_compare_means(comparisons = my_comparisons) +
+  stat_compare_means(label.y = 0.003) 
+
+ggsave(filename = 'pdf/samples_kruskal_wallis_up_down_sites_regions.pdf', plot = p, width = 250,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
 
