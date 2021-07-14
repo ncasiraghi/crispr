@@ -1,7 +1,9 @@
 library(GenomicAlignments)
 library(tidyverse)
 
-setwd('/BCGLAB/darosio_crispr/out/')
+wd <- '/BCGLAB/darosio_crispr/out/'
+
+setwd(wd)
 
 nick <- data.frame(sample = c('D10A','L-16','L-JON','L-PUC'), site = c(202,202,154,154),stringsAsFactors = F)
 
@@ -9,11 +11,11 @@ nick <- data.frame(sample = c('D10A','L-16','L-JON','L-PUC'), site = c(202,202,1
 ## BAM files should be first sorted by read position and indexed with SAMTools
 
 ## Function to get the INDELs events
-getIndels <- function(i,reads){
+getIndels <- function(i,di.reads){
   
-  cigar <- reads$cigar[i]
+  cigar <- di.reads$cigar[i]
   
-  pos <- reads$pos[i]
+  pos <- di.reads$pos[i]
   
   tab <- as.data.frame(cigarRangesAlongReferenceSpace(cigar, with.ops=TRUE)[[1]])
   
@@ -22,10 +24,10 @@ getIndels <- function(i,reads){
   
   tab$start <- tab$start + pos
   tab$end <- tab$end + pos
-
-  out <- tab %>% 
-    filter(names %in% c('D','I')) %>% 
-    mutate(qname = reads$qname[i])
+  
+  out <- tab %>%
+    filter(names %in% c('D','I')) %>%
+    mutate(qname = di.reads$qname[i])
   
   return(out)
 
@@ -35,46 +37,51 @@ getIndels <- function(i,reads){
 
 bamlist = list.files("/BCGLAB/darosio_crispr/bam",pattern = ".sorted.bam$",full.names = TRUE)
 
-df.totals <- list()
-df.reads <- list()
-df.indels <- list()
-
 for(file.bam in bamlist){
   
   message(file.bam)
   
   id <- gsub(basename(file.bam),pattern = '.sorted.bam',replacement = '')
   
-  param <- ScanBamParam(flag=scanBamFlag(isUnmappedQuery=FALSE,isDuplicate=NA),what=c("rname", "qname","pos", "cigar","mapq"))
+  param <- ScanBamParam(flag=scanBamFlag(isUnmappedQuery=FALSE,isDuplicate=NA),what=c("qname","pos", "cigar","mapq"))
   bam <- scanBam(file.bam, param=param)[[1]]
   
   tot.reads <- as.data.frame(bam) %>% 
     filter(mapq >= 30) %>% 
-    mutate(sample = id)
+    mutate(sample = id) %>% 
+    separate(qname,sep = ':',into = letters[1:7],remove = TRUE) %>% 
+    select(e:sample) %>% 
+    unite('qname',e:g,sep = ":",remove = TRUE)
   
-  df.totals[[id]] <- tot.reads
+  rm(bam)
   
-  reads <- tot.reads %>% 
+  save(tot.reads,file = file.path(wd,'rdata',paste0('tot.totals_',id,'.RData')),compress = TRUE)
+  
+  di.reads <- tot.reads %>% 
     filter(grepl(cigar,pattern = "D|I" )) %>% 
-    filter(!grepl(cigar,pattern = "S|H")) %>% 
-    mutate(sample = id)
+    filter(!grepl(cigar,pattern = "S|H"))
   
-  df.reads[[id]] <- reads
+  rm(tot.reads)
   
-  indels <- mclapply(seq_len(nrow(reads)),FUN = getIndels,reads,mc.cores = 30)
+  save(di.reads,file = file.path(wd,'rdata',paste0('di.reads_',id,'.RData')),compress = TRUE)
   
-  indels <- do.call(rbind,indels) %>% 
-    mutate(sample = id)
+  indels <- mclapply(seq_len(nrow(di.reads)),FUN = getIndels,di.reads,mc.cores = 10)
   
-  df.indels[[id]] <- indels
+  rm(di.reads)
+  
+  indels <- do.call(rbind,indels) %>% mutate(sample = id)
+  
+  save(indels,file = file.path(wd,'rdata',paste0('indels_',id,'.RData')),compress = TRUE)
+  
+  rm(indels)
   
 }
 
-df.totals <- do.call(rbind,df.totals)
-df.reads <- do.call(rbind,df.reads)
-df.indels <- do.call(rbind,df.indels)
+# df.totals <- do.call(rbind,df.totals)
+# df.reads <- do.call(rbind,df.reads)
+# df.indels <- do.call(rbind,df.indels)
 
-save(df.totals,df.indels,df.reads,file = file.path('/BCGLAB/darosio_crispr/out/data_indels.RData'),compress = TRUE)
+# save(df.totals,df.indels,df.reads,file = file.path('/BCGLAB/darosio_crispr/out/data_indels.RData'),compress = TRUE)
 
 # load('/BCGLAB/darosio_crispr/out/data_indels.RData')
 if(FALSE){
@@ -253,8 +260,6 @@ p <- ggplot(data=covdata, aes(x=pos, y=value)) +
   geom_vline(xintercept = 202,color = "#006837", size=0.4) + ggtitle('Positions covered by a D,I events with width > 1')
 
 ggsave(filename = 'pdf/DI_pos_covered_no_singles.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
-
-
 
 
 }
