@@ -5,13 +5,13 @@ setwd('/BCGLAB/darosio_crispr/out/')
 
 nick <- data.frame(sample = c('D10A','L-16','L-JON','L-PUC'), site = c(202,202,154,154),stringsAsFactors = F)
 
-ps <- list.files('/BCGLAB/darosio_crispr/pacbam',pattern = '\\.pileup$',full.names = TRUE)
+ps <- list.files('/BCGLAB/darosio_crispr/pacbam',pattern = '\\.filtered.pileup$',full.names = TRUE)
 
 df <- c()
 
 for(p in ps){
   message(p)
-  m <- read.delim(p,stringsAsFactors = FALSE) %>% mutate(sample = gsub(basename(p),pattern = '\\.sorted.pileup',replacement = '') )
+  m <- read.delim(p,stringsAsFactors = FALSE) %>% mutate(sample = gsub(basename(p),pattern = '\\.sorted.filtered.pileup',replacement = '') )
   
   df <- rbind(df,m)
 }
@@ -21,6 +21,7 @@ df <- df %>% filter(sample != 'Undetermined')
 # coverage
 p <- ggplot(df, aes(x=pos, y=cov)) +
   geom_bar(stat="identity",fill='grey70',color='grey70',width = 1) +
+  geom_vline(xintercept = c(154,202),linetype="dashed",size=0.4,color = 'orangered') + 
   coord_cartesian(xlim=c(121,558)) +
   geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
   facet_wrap(~sample,nrow = 4)
@@ -43,7 +44,8 @@ dat <- df %>%
 p <- ggplot(dat, aes(x=pos, y=base_af, fill=base)) +
   geom_bar(stat="identity",width = 1) +
   coord_cartesian(ylim=c(0,0.003), xlim=c(121,322)) +
-  geom_vline(aes(xintercept = site), nick,linetype="dotted",size=0.4) +
+  geom_vline(xintercept = c(154,202),linetype="dashed",size=0.4,color = 'orangered') + 
+  geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
   facet_wrap(~sample,nrow = 4) 
 
 ggsave(filename = 'pdf/samples_afs_base.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
@@ -58,8 +60,9 @@ delta <- left_join(df,ctrl,by = c('chr','pos','ref'),suffix = c('_case','_ctrl')
   
 p <- ggplot(delta, aes(x=pos, y=af_case))+
   geom_line() +
-  coord_cartesian(xlim=c(121,322)) +
-  geom_vline(aes(xintercept = site), nick, linetype="dotted",size=0.4) +
+  coord_cartesian(ylim=c(0,0.003), xlim=c(121,322)) +
+  geom_vline(xintercept = c(154,202),linetype="dashed",size=0.4,color = 'orangered') + 
+  geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
   facet_wrap(~sample,nrow = 4) 
 
 ggsave(filename = 'pdf/samples_afs.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
