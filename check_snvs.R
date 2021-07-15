@@ -70,7 +70,8 @@ ggsave(filename = 'pdf/samples_afs.pdf', plot = p, width = 210,height = 150,dpi 
 p <- ggplot(delta %>% filter(sample != 'L-PUC'), aes(x=pos, y=delta_af))+
   geom_line() +
   coord_cartesian(xlim=c(121,322)) +
-  geom_vline(aes(xintercept = site), nick %>% filter(sample != 'L-PUC'), linetype="dotted",size=0.4) +
+  geom_vline(xintercept = c(154,202),linetype="dashed",size=0.4,color = 'orangered') + 
+  geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
   facet_wrap(~sample,nrow = 4) 
 
 ggsave(filename = 'pdf/samples_delta_afs.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
