@@ -3,7 +3,7 @@ library(ggpubr)
 
 setwd('/BCGLAB/darosio_crispr/out/')
 
-nick <- data.frame(sample = c('D10A','L-16','L-JON','L-PUC'), site = c(202,202,154,154),stringsAsFactors = F)
+nick <- data.frame(sample = c('D10A','L-16','L-JON'), site = c(202,202,154),stringsAsFactors = F)
 
 ps <- list.files('/BCGLAB/darosio_crispr/pacbam',pattern = '\\.filtered.pileup$',full.names = TRUE)
 
@@ -21,9 +21,9 @@ df <- df %>% filter(sample != 'Undetermined')
 # coverage
 p <- ggplot(df, aes(x=pos, y=cov)) +
   geom_bar(stat="identity",fill='grey70',color='grey70',width = 1) +
-  geom_vline(xintercept = c(154,202),linetype="dashed",size=0.4,color = 'orangered') + 
   coord_cartesian(xlim=c(121,558)) +
-  geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
+  geom_vline(xintercept = c(121,143),linetype="dotted",size=0.4) +
+  geom_vline(aes(xintercept=site), nick, linetype="dashed",size=0.5,color = 'orangered') +
   facet_wrap(~sample,nrow = 4)
 
 ggsave(filename = 'pdf/samples_coverage.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
@@ -44,8 +44,8 @@ dat <- df %>%
 p <- ggplot(dat, aes(x=pos, y=base_af, fill=base)) +
   geom_bar(stat="identity",width = 1) +
   coord_cartesian(ylim=c(0,0.003), xlim=c(121,322)) +
-  geom_vline(xintercept = c(154,202),linetype="dashed",size=0.4,color = 'orangered') + 
-  geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
+  geom_vline(xintercept = c(121,143),linetype="dotted",size=0.4) +
+  geom_vline(aes(xintercept=site), nick, linetype="dashed",size=0.5,color = 'orangered') +
   facet_wrap(~sample,nrow = 4) 
 
 ggsave(filename = 'pdf/samples_afs_base.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
@@ -61,8 +61,8 @@ delta <- left_join(df,ctrl,by = c('chr','pos','ref'),suffix = c('_case','_ctrl')
 p <- ggplot(delta, aes(x=pos, y=af_case))+
   geom_line() +
   coord_cartesian(ylim=c(0,0.003), xlim=c(121,322)) +
-  geom_vline(xintercept = c(154,202),linetype="dashed",size=0.4,color = 'orangered') + 
-  geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
+  geom_vline(xintercept = c(121,143),linetype="dotted",size=0.4) +
+  geom_vline(aes(xintercept=site), nick, linetype="dashed",size=0.5,color = 'orangered') +
   facet_wrap(~sample,nrow = 4) 
 
 ggsave(filename = 'pdf/samples_afs.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
@@ -70,11 +70,19 @@ ggsave(filename = 'pdf/samples_afs.pdf', plot = p, width = 210,height = 150,dpi 
 p <- ggplot(delta %>% filter(sample != 'L-PUC'), aes(x=pos, y=delta_af))+
   geom_line() +
   coord_cartesian(xlim=c(121,322)) +
-  geom_vline(xintercept = c(154,202),linetype="dashed",size=0.4,color = 'orangered') + 
-  geom_vline(xintercept = c(121,143,538,558),linetype="dotted",size=0.4) +
+  geom_vline(xintercept = c(121,143),linetype="dotted",size=0.4) +
+  geom_vline(aes(xintercept=site), nick, linetype="dashed",size=0.5,color = 'orangered') +
   facet_wrap(~sample,nrow = 4) 
 
 ggsave(filename = 'pdf/samples_delta_afs.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+p <- ggplot(delta %>% filter(sample != 'L-PUC'), aes(x=pos, y=delta_af, group=sample))+
+  geom_line(aes(color = sample),size = 0.6) +
+  coord_cartesian(xlim=c(121,322)) +
+  geom_vline(xintercept = c(121,143),linetype="dotted",size=0.4) +
+  geom_vline(aes(xintercept=site), nick, linetype="dashed",size=0.5,color = 'orangered')
+  
+ggsave(filename = 'pdf/samples_delta_afs_alltogether.pdf', plot = p, width = 300,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
 my_comparisons <- list(c('D10A','L-PUC'),
                        c('L-16','L-PUC'),

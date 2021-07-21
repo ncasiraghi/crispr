@@ -1,140 +1,20 @@
 library(GenomicAlignments)
 library(tidyverse)
 
-wd <- '/BCGLAB/darosio_crispr/out'
+wd <- '/BCGLAB/darosio_crispr/out_realigned/'
+
+if(!file.exists(file.path(wd,'pdf'))){
+  dir.create(file.path(wd,'pdf'))
+}
 
 setwd(wd)
 
-nick <- data.frame(sample = c('D10A','L-16','L-JON','L-PUC'), site = c(202,202,154,154),stringsAsFactors = F)
+nick <- data.frame(sample = c('D10A','L-16','L-JON'), site = c(202,202,154),stringsAsFactors = F)
 
 ## This code was designed for BAM files aligned against a specific reference genome "amplicons-deepseq.fasta"
 ## BAM files should be first sorted by read position and indexed with SAMTools
 
-# generate data
-
-if(FALSE){
-  
-  ## Function to get the INDELs events
-  getIndels <- function(i,di.reads){
-    
-    cigar <- di.reads$cigar[i]
-    
-    pos <- di.reads$pos[i]
-    
-    tab <- as.data.frame(cigarRangesAlongReferenceSpace(cigar, with.ops=TRUE)[[1]])
-    
-    x = as.data.frame(cigarRangesAlongQuerySpace(cigar, with.ops=TRUE)[[1]])
-    tab$tot.width = x$width+tab$width
-    
-    tab$start <- tab$start + pos
-    tab$end <- tab$end + pos
-    
-    out <- tab %>%
-      filter(names %in% c('D','I')) %>%
-      mutate(qname = di.reads$qname[i])
-    
-    return(out)
-    
-  }
-  
-  ## Code to extract INDELs statistics from BAM files
-  
-  bamlist = list.files("/BCGLAB/darosio_crispr/bam",pattern = ".sorted.bam$",full.names = TRUE)
-  
-  for(file.bam in bamlist){
-    
-    message(file.bam)
-    
-    id <- gsub(basename(file.bam),pattern = '.sorted.bam',replacement = '')
-    
-    param <- ScanBamParam(flag=scanBamFlag(isUnmappedQuery=FALSE,isDuplicate=NA),what=c("qname","pos", "cigar","mapq"))
-    bam <- scanBam(file.bam, param=param)[[1]]
-    
-    tot.reads <- as.data.frame(bam) %>% 
-      filter(mapq >= 30) %>% 
-      mutate(sample = id) %>% 
-      separate(qname,sep = ':',into = letters[1:7],remove = TRUE) %>% 
-      select(e:sample) %>% 
-      unite('qname',e:g,sep = ":",remove = TRUE)
-    
-    rm(bam)
-    
-    save(tot.reads,file = file.path(wd,'rdata',paste0('tot.reads_',id,'.RData')),compress = TRUE)
-    
-    di.reads <- tot.reads %>% 
-      filter(grepl(cigar,pattern = "D|I" )) %>% 
-      filter(!grepl(cigar,pattern = "S|H"))
-    
-    rm(tot.reads)
-    
-    save(di.reads,file = file.path(wd,'rdata',paste0('di.reads_',id,'.RData')),compress = TRUE)
-    
-    indels <- mclapply(seq_len(nrow(di.reads)),FUN = getIndels,di.reads,mc.cores = 30)
-    
-    rm(di.reads)
-    
-    indels <- do.call(rbind,indels) %>% mutate(sample = id)
-    
-    save(indels,file = file.path(wd,'rdata',paste0('indels_',id,'.RData')),compress = TRUE)
-    
-    rm(indels)
-    
-  }
-  
-  df.totals <- list()
-  for( rdata in list.files('/BCGLAB/darosio_crispr/out/rdata',pattern = 'tot.reads',full.names = TRUE)){
-    message(rdata)
-    load(rdata)
-    df.totals[[basename(rdata)]] <- tot.reads
-  }
-  df.totals <- do.call(rbind, df.totals)
-  
-  df.reads <- list()
-  for( rdata in list.files('/BCGLAB/darosio_crispr/out/rdata',pattern = 'di.reads',full.names = TRUE)){
-    message(rdata)
-    load(rdata)
-    df.reads[[basename(rdata)]] <- di.reads
-  }
-  df.reads <- do.call(rbind, df.reads)
-  
-  df.indels <- list()
-  for( rdata in list.files('/BCGLAB/darosio_crispr/out/rdata',pattern = 'indels',full.names = TRUE)){
-    message(rdata)
-    load(rdata)
-    df.indels[[basename(rdata)]] <- indels
-  }
-  df.indels <- do.call(rbind, df.indels)
-  
-  
-  save(df.totals,df.reads,df.indels,file = file.path(wd,'rdata','fulldata.RData'),compress = TRUE)
-  
-}
-
 load(file = file.path(wd,'rdata','fulldata.RData'))
-
-# remove reads with D or I in 5' primer sequence
-
-bias <- df.indels %>% 
-  filter(start <= 143) %>% 
-  unite('id',qname,sample,sep = ':',remove = FALSE)
-
-save(bias,file = file.path(wd,'rdata','reads_to_exclude.RData'),compress = TRUE)
-
-bias %>% 
-  group_by(sample) %>% 
-  summarise(n_exclude = n())
-
-df.totals <- df.totals %>% 
-  unite('id',qname,sample,sep = ':',remove = FALSE) %>% 
-  filter(!id %in% bias$id)
-
-df.reads <- df.reads %>% 
-  unite('id',qname,sample,sep = ':',remove = FALSE) %>% 
-  filter(!id %in% bias$id)
-
-df.indels <- df.indels %>% 
-  unite('id',qname,sample,sep = ':',remove = FALSE) %>% 
-  filter(!id %in% bias$id)
 
 # summary stats
 
@@ -245,7 +125,7 @@ p <- ggplot(zb, aes(x=start)) +
   geom_histogram(binwidth=1) +
   facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(121,322)) +
   geom_vline(xintercept = c(121,143),linetype="dotted",size=0.4) +
-  geom_vline(xintercept = c(154,202),linetype="dashed",size=0.4,color = 'orangered') + 
+  geom_vline(aes(xintercept=site), nick, linetype="dashed",size=0.5,color = 'orangered') +
   ggtitle('Starting position of D,I events')
 
 ggsave(filename = 'pdf/DI_starts.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
@@ -298,17 +178,8 @@ p <- ggplot(covdata, aes(x=pos, y=value)) +
   geom_bar(stat="identity",fill='grey50',color='grey50',width = 1) +
   facet_wrap(~sample,nrow = 5) + coord_cartesian(xlim=c(121,322)) +
   geom_vline(xintercept = c(121,143),linetype="dotted",size=0.4) +
-  geom_vline(xintercept = c(154,202),linetype="dashed",size=0.4,color = 'orangered') + 
+  geom_vline(aes(xintercept=site), nick, linetype="dashed",size=0.5,color = 'orangered') +
   ggtitle('Positions covered by D,I events')
 
 ggsave(filename = 'pdf/DI_pos_covered.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
-
-
-
-
-
-
-
-
-
 
