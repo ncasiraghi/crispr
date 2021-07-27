@@ -1,7 +1,7 @@
 library(GenomicAlignments)
 library(tidyverse)
 
-if(TRUE){
+if(FALSE){
   
   # load biased reads
   load('/BCGLAB/darosio_crispr/out/rdata/reads_to_exclude.RData')
@@ -51,9 +51,14 @@ if(TRUE){
 }
 
 # compute pileup
-wd <- '/BCGLAB/darosio_crispr/pacbam'
+# wd <- '/BCGLAB/darosio_crispr/bowtie2'
+wd <- '/BCGLAB/darosio_crispr/bwa'
 
-setwd(wd)
+if(!file.exists(file.path(wd,'pacbam'))){
+  dir.create(file.path(wd,'pacbam'))
+}
+
+setwd(file.path(wd,'pacbam'))
 
 # create toy vcf
 
@@ -66,7 +71,7 @@ vcf <- data.frame(CHROM = 'egfp',
                   INFO = '.',
                   stringsAsFactors = FALSE)
 
-vcf.file <- '/BCGLAB/darosio_crispr/pacbam/toy.vcf'
+vcf.file <- file.path(wd,'pacbam','toy.vcf')
 
 colnames(vcf)[1] <- '#CHROM' 
 
@@ -94,13 +99,13 @@ bed.file <- gsub(basename(fasta),pattern = '\\.fasta$',replacement = '.bed')
 
 write.table(bed,file = bed.file,sep = '\t',col.names = FALSE,row.names = FALSE,quote = FALSE)
 
-bam_files <- list.files('/BCGLAB/darosio_crispr/bam',full.names = TRUE,pattern = 'sorted.filtered.bam$')
+bam_files <- list.files(file.path(wd,'bam'),full.names = TRUE,pattern = '\\.sorted\\.realigned\\.bam$')
 
 for(bam in bam_files){
   
   message(bam)
   
-  cmd <- paste0('/CIBIO/sharedRL/Projects/PaCBAM/git_repo/pacbam/pacbam',' bam=',bam,' fasta=',fasta,' vcf=',vcf.file,' bed=',file.path(wd,bed.file),' mode=4',' threads=20')
+  cmd <- paste0('/CIBIO/sharedRL/Projects/PaCBAM/git_repo/pacbam/pacbam',' bam=',bam,' fasta=',fasta,' vcf=',vcf.file,' bed=',file.path(wd,'pacbam',bed.file),' mode=4',' threads=20')
   
   system(cmd)
   

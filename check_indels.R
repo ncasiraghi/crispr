@@ -1,7 +1,8 @@
 library(GenomicAlignments)
 library(tidyverse)
 
-wd <- '/BCGLAB/darosio_crispr/out_realigned/'
+wd <- '/BCGLAB/darosio_crispr/bwa/out'
+# wd <- '/BCGLAB/darosio_crispr/bowtie2/out'
 
 if(!file.exists(file.path(wd,'pdf'))){
   dir.create(file.path(wd,'pdf'))

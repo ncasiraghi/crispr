@@ -1,12 +1,26 @@
 library(GenomicAlignments)
 library(tidyverse)
 
-wd <- '/BCGLAB/darosio_crispr/out_realigned'
+# data <- 'bowtie'
+data <- 'bwa'
+
+if(data == 'bowtie'){
+  wd <- '/BCGLAB/darosio_crispr/bowtie2/out'
+  bam_folder <- file.path(wd,'bam')
+}
+
+if(data == 'bwa'){
+  wd <- '/BCGLAB/darosio_crispr/bwa/out'
+  bam_folder <- file.path(wd,'bam')
+}
 
 rdatafolder <- file.path(wd,'rdata')
 
-if(!file.exists(rdatafolder)){
-  dir.create(file.path(wd,'rdata'))
+if(!file.exists(file.path(rdatafolder))){
+  dir.create(file.path(rdatafolder),showWarnings = FALSE)
+} else{
+  unlink(file.path(rdatafolder),recursive = TRUE)
+  dir.create(file.path(rdatafolder), showWarnings = FALSE)
 }
 
 setwd(rdatafolder)
@@ -40,7 +54,9 @@ getIndels <- function(i,di.reads){
 
 pattern <- "\\.sorted\\.realigned\\.bam$"
 
-bamlist <- list.files("/BCGLAB/darosio_crispr/bam",pattern = pattern,full.names = TRUE)
+bamlist <- list.files(bam_folder,pattern = pattern,full.names = TRUE) 
+
+bamlist <- grep(bamlist,pattern = 'Undetermined',value = TRUE,invert = TRUE)
 
 for(file.bam in bamlist){
   
@@ -106,7 +122,4 @@ for( rdata in list.files(rdatafolder,pattern = 'indels',full.names = TRUE)){
 }
 df.indels <- do.call(rbind, df.indels)
 
-
 save(df.totals,df.reads,df.indels,file = 'fulldata.RData',compress = TRUE)
-
-
