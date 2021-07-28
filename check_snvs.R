@@ -2,8 +2,8 @@ library(tidyverse)
 library(ggpubr)
 library(gridExtra)
 
-# wd <- '/BCGLAB/darosio_crispr/bowtie2/out'
-wd <- '/BCGLAB/darosio_crispr/bwa/out'
+wd <- '/BCGLAB/darosio_crispr/bowtie2/out'
+# wd <- '/BCGLAB/darosio_crispr/bwa/out'
 
 setwd(wd)
 
@@ -32,7 +32,8 @@ p <- ggplot(df, aes(x=pos, y=cov)) +
   coord_cartesian(xlim=c(121,558)) +
   geom_vline(xintercept = c(121,143),linetype="dotted",size=0.4) +
   geom_vline(aes(xintercept=site), nick, linetype="dashed",size=0.5,color = 'orangered') +
-  facet_wrap(~sample,nrow = 4)
+  facet_wrap(~sample,nrow = 4) +
+  scale_y_continuous(trans='log10') 
 
 ggsave(filename = 'pdf/samples_coverage.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
@@ -51,6 +52,19 @@ p <- ggplot(dat, aes(x=pos, y=base_af, fill=base)) +
   facet_wrap(~sample,nrow = 4) 
 
 ggsave(filename = 'pdf/samples_afs_base.pdf', plot = p, width = 210,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+
+# differences in distribution
+
+my_comparisons <- list(c('D10A','L-PUC'),
+                       c('L-16','L-PUC'),
+                       c('L-JON','L-PUC'))
+
+p <- ggboxplot(dat, x = "sample", y = "base_af", color = "sample", palette = "jco") + 
+  stat_compare_means(comparisons = my_comparisons) +
+  theme(axis.text=element_text(size=8))
+
+ggsave(filename = file.path(wd,'pdf','overall_vafs.pdf'), plot = p, width = 150,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
 # check differences around cut sites
 
@@ -87,7 +101,6 @@ for(wnd in c(10,15,20,25,30)){
   ggsave(filename = file.path(wd,'pdf',paste0('around_site_wnd',wnd,'.pdf')), plot = do.call(grid.arrange,c(plots,nrow=1)), width = 250,height = 150,dpi = 300,units = 'mm',device = 'pdf')
   
 }
-
 
 ctrl <- df %>% 
   filter(sample == 'L-PUC') %>% 
