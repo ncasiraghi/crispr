@@ -23,7 +23,7 @@ fastq_R2 <- data.frame(sample = sapply(strsplit(basename(fastq_R2),split = '_'),
 
 fastq <- full_join(x = fastq_R1,y = fastq_R2, by = 'sample',suffix = c("_1","_2"))
 
-for(i in seq_len(nrow(fastq))[1]){
+for(i in seq_len(nrow(fastq))){
   
   message(fastq$sample[i])
   
