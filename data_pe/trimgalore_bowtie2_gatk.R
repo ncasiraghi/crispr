@@ -19,30 +19,37 @@ fastq_R2 <- data.frame(sample = sapply(strsplit(basename(fastq_R2),split = '_'),
 
 fastq <- rbind(fastq_R1,fastq_R2) %>% arrange(sample,read)
 
-# bowtie2 reference
+build.reference <- FALSE
 
-setwd(file.path(wd,'reference/bowtie2_reference'))
+if(build.reference){
 
-bowtie_fasta <- file.path(wd,'reference/bowtie2_reference/spike.fasta')
+  # bowtie2 reference
+  
+  setwd(file.path(wd,'reference/bowtie2_reference'))
+  bowtie_fasta <- file.path(wd,'reference/bowtie2_reference/spike.fasta')
+  cmd <- paste('bowtie2-build -f',bowtie_fasta,gsub(basename(bowtie_fasta),pattern = '\\.fasta',replacement = ''))
+  system(cmd)
+  
+  # gatk reference
+  
+  gatk_fasta <- file.path(wd,'reference/gatk_reference/spike.fasta')
+  cmd <- paste('picard CreateSequenceDictionary',paste('-R',gatk_fasta))
+  system(cmd)
+  cmd <- paste('samtools faidx',gatk_fasta)
+  system(cmd)
 
-cmd <- paste('bowtie2-build -f',bowtie_fasta,gsub(basename(bowtie_fasta),pattern = '\\.fasta',replacement = ''))
-system(cmd)
-
-# gatk reference
-
-gatk_fasta <- file.path(wd,'reference/gatk_reference/spike.fasta')
-
-cmd <- paste('picard CreateSequenceDictionary',paste('-R',gatk_fasta))
-system(cmd)
-
-cmd <- paste('samtools faidx',gatk_fasta)
-system(cmd)
+} else {
+  bowtie_fasta <- file.path(wd,'reference/bowtie2_reference/spike.fasta')
+  gatk_fasta <- file.path(wd,'reference/gatk_reference/spike.fasta')
+}
 
 # trimgalore trimming
 
 setwd(wd)
 
-trim_galore <- 'trim_galore --path_to_cutadapt /Users/ncasiraghi/opt/miniconda3/envs/darosio/bin/cutadapt'
+message("trimming fastq files")
+
+trim_galore <- 'trim_galore --path_to_cutadapt /Users/ncasiraghi/opt/miniconda3/envs/crispr/bin/cutadapt'
 
 cmd <- paste(trim_galore,'-q 30 --paired --retain_unpaired',paste(fastq$fastq,collapse = ' '),'-o',file.path(wd,'data/fastq_trimmed'))
 system(cmd)
@@ -83,7 +90,7 @@ for(i in seq_len(nrow(trim))){
   system(cmd)
   
   # GATK
-  if(TRUE){
+  if(FALSE){
     
     gatk <- 'gatk'
     
@@ -114,5 +121,3 @@ for(i in seq_len(nrow(trim))){
   }
   
 }
-  
-
