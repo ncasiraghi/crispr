@@ -4,9 +4,9 @@ library(parallel)
 
 wd <- '/Users/ncasiraghi/Documents/unitn/darosio'
 
-bam_folder  <- file.path(wd,'data/bam_bwa')
+bam_folder  <- file.path(wd,'data/bam/bwa')
 
-rdatafolder <- file.path(wd,'data/indels/isPaired_TRUE')
+rdatafolder <- file.path(wd,'data/indels/bwa/')
 
 setwd(rdatafolder)
 

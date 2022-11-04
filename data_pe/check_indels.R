@@ -3,11 +3,11 @@ library(tidyverse)
 library(ComplexHeatmap)
 library(circlize)
 
-wd <- '/Users/ncasiraghi/Documents/unitn/darosio/results/PE/isPaired_TRUE'
+wd <- '/Users/ncasiraghi/Documents/unitn/darosio/results/PE/bwa'
 
 setwd(wd)
 
-load(file = "/Users/ncasiraghi/Documents/unitn/darosio/data/indels/isPaired_TRUE/fulldata.RData")
+load(file = "/Users/ncasiraghi/Documents/unitn/darosio/data/indels/bwa/fulldata.RData")
 
 nick <- data.frame(sample = unique(df.indels$sample), site = 2954,stringsAsFactors = F)
 
