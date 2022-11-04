@@ -38,7 +38,7 @@ for(i in seq_len(nrow(fastq))){
   cmd <- paste('bwa mem -Y',RG,bwa_fasta,fastq$fastq_1[i],fastq$fastq_2[i],'>',sam)
   system(cmd)
 
-  message("Step 3	from SAM to sorted BAM")
+  message("Step 2	from SAM to sorted BAM")
   
   bam <- file.path(wd,'data/bam_bwa',paste0(fastq$sample[i],'.bam'))
   
@@ -49,7 +49,7 @@ for(i in seq_len(nrow(fastq))){
   cmd <- paste('samtools sort','-o',sorted.bam,bam)
   system(cmd)
 
-  message("Step 4	Mark Duplicates")
+  message("Step 3	Mark Duplicates")
   
   mets <- str_replace(string = bam,pattern = '\\.bam$',replacement = ".dedup_metrics.txt")
   
@@ -58,19 +58,19 @@ for(i in seq_len(nrow(fastq))){
   cmd <- paste('gatk MarkDuplicates -I',sorted.bam,'-M',mets,'-O',dedup.bam)
   system(cmd)
 
-  message("Step 6	index BAM")
+  message("Step 4	index BAM")
   
   cmd <- paste('samtools index',sorted.bam)
   system(cmd)
   
-  message("Step 7	HaplotypeCaller")
+  message("Step 5	HaplotypeCaller")
 
   vcf <- str_replace(string = basename(sorted.bam),pattern = '\\.bam$',replacement = "_raw_variants.vcf")
 
   cmd <- paste('gatk HaplotypeCaller -R',gatk_fasta,'-I',sorted.bam,'-O',file.path(wd,'data/haplotypecaller',vcf))
   system(cmd)
   
-  message("Step 8	BaseRecalibrator")
+  message("Step 6	BaseRecalibrator")
   
   recal <- str_replace(sorted.bam,pattern = "\\.bam$",replacement = "_recal_data.table")
   
@@ -80,7 +80,7 @@ for(i in seq_len(nrow(fastq))){
                '-O',recal)
   system(cmd)
   
-  message("Step 9	ApplyBQSR")  
+  message("Step 7	ApplyBQSR")  
   
   recal.bam <- str_replace(sorted.bam,pattern = "\\.bam$",replacement = ".recal.bam")
   
@@ -93,7 +93,7 @@ for(i in seq_len(nrow(fastq))){
   cmd <- paste('samtools index',recal.bam)
   system(cmd)
   
-  message("Step 9	HaplotypeCaller on recal BAM")
+  message("Step 8	HaplotypeCaller on recal BAM")
   
   vcf <- str_replace(string = basename(recal.bam),pattern = '\\.bam$',replacement = "_raw_variants.vcf")
   
