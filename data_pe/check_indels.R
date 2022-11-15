@@ -135,9 +135,13 @@ getIndelsCov <- function(zb,min.width=1){
   
 }
 
-covdata <- getIndelsCov(zb = zb,min.width = 1)
+covdata <- getIndelsCov(zb = zb,min.width = 2)
 
 m <- covdata$mat[,2900:3000]
+
+m <- m[all$sample,]
+
+m <- m / all$n
 
 col_fun = colorRamp2(breaks = c(min(m),max(m)), c("white", "forestgreen"))
 
