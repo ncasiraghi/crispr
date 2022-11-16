@@ -28,11 +28,11 @@ p <- ggplot(df, aes(x=pos, y=cov)) +
   facet_grid(method~sample,scales = 'free_y') +
   ylab("Coverage")
 
-ggsave(filename = 'samples_coverage.pdf', plot = p, width = 300,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+ggsave(filename = 'samples_coverage.pdf', plot = p, width = 400,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
 p <- p + scale_y_continuous(trans='log10') + ylab("log10(Coverage)")
 
-ggsave(filename = 'samples_coverage_log10.pdf', plot = p, width = 300,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+ggsave(filename = 'samples_coverage_log10.pdf', plot = p, width = 400,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
 # variant allelic fractions
 dat <- df %>%
@@ -47,14 +47,16 @@ p <- ggplot(dat, aes(x=pos, y=cov)) +
   geom_vline(xintercept = 2954, linetype="dashed",size=0.2,color = 'orangered') +
   facet_grid(method~sample,scales = 'free_y') 
 
-ggsave(filename = 'samples_coverage_zoom.pdf', plot = p, width = 300,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+ggsave(filename = 'samples_coverage_zoom.pdf', plot = p, width = 400,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+
+dat <- dat %>% filter(ref != base)
 
 p <- ggplot(dat, aes(x=cov, y=base_af)) +
   geom_point(size=2, shape=23) +
   theme_bw() +
   facet_grid(method~sample) 
 
-ggsave(filename = 'afs_cov.pdf', plot = p, width = 300,height = 150,dpi = 300,units = 'mm',device = 'pdf')
+ggsave(filename = 'afs_cov.pdf', plot = p, width = 400,height = 150,dpi = 300,units = 'mm',device = 'pdf')
 
 p <- ggplot(dat %>% filter(cov > 250000), aes(x=pos, y=base_af, fill=base)) +
   theme_bw() +
