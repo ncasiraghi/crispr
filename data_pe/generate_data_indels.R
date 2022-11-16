@@ -2,9 +2,9 @@ library(GenomicAlignments)
 library(tidyverse)
 library(parallel)
 
-wd <- '/Users/ncasiraghi/Documents/unitn/darosio'
+wd <- '/Volumes/profiles/Casiraghi/darosio'
 
-bam_folder  <- file.path(wd,'data/bam/bwa')
+bam_folder  <- file.path(wd,'data/bwa-aln-sampe')
 
 rdatafolder <- file.path(wd,'data/indels/bwa/')
 
