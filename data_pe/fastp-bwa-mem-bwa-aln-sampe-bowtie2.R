@@ -1,4 +1,3 @@
-# https://gencore.bio.nyu.edu/variant-calling-pipeline-gatk4/
 
 wd <- '/mnt/profile/darosio'
 
@@ -54,6 +53,8 @@ for(i in seq_len(nrow(fastq))){
   
   message(id.sample)
   
+  # trimming
+  
   out.R1.fq.gz <- file.path(wd,'data/fastp',paste0(id.sample,'_R1_001.fastq.gz'))
   out.R2.fq.gz <- file.path(wd,'data/fastp',paste0(id.sample,'_R2_001.fastq.gz'))
   
@@ -61,9 +62,15 @@ for(i in seq_len(nrow(fastq))){
   
   system(cmd)
   
+  # trimming + merge PE reads
+  
+  
+  
 }
 
 }
+
+if(FALSE){
 
 # use trimmed fastq
 
@@ -176,4 +183,5 @@ for(i in seq_len(nrow(fastq))){
   
 }  
 
+}
 message("[done.]")
