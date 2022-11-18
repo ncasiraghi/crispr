@@ -2,7 +2,7 @@ library(tidyverse)
 library(ggpubr)
 library(gridExtra)
 
-wd <- '/Volumes/profiles/Casiraghi/darosio'
+wd <- '/mnt/profile/darosio/'
 
 setwd(wd)
 
@@ -14,12 +14,16 @@ for(p in ps){
   message(p)
   
   m <- read.delim(p,stringsAsFactors = FALSE) %>% 
-    mutate(sample = gsub(basename(p),pattern = '\\.sorted\\.pileup',replacement = '')) %>% 
+    mutate(sample = gsub(basename(p),pattern = '\\.pileup',replacement = '')) %>% 
     mutate(method = dirname(dirname(p)) %>% basename()) %>% 
     filter(cov > 0)
   
   df <- rbind(df,m)
 }
+
+df <- df %>% 
+  filter(grepl(sample,pattern = '.merged.sorted.clean$')) %>% 
+  mutate(sample = gsub(sample,pattern = '.merged.sorted.clean$',replacement = ""))
 
 # coverage
 p <- ggplot(df, aes(x=pos, y=cov)) +
