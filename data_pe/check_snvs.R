@@ -14,17 +14,22 @@ for(p in ps){
   message(p)
   
   m <- read.delim(p,stringsAsFactors = FALSE) %>% 
-    mutate(sample = gsub(basename(p),pattern = '\\.pileup',replacement = '')) %>% 
+    mutate(sample = gsub(basename(p),pattern = '.pileup$',replacement = '')) %>%
     mutate(method = dirname(dirname(p)) %>% basename()) %>% 
     filter(cov > 0)
   
   df <- rbind(df,m)
 }
 
-df <- df %>% 
-  filter(grepl(sample,pattern = '.merged.sorted.clean$')) %>% 
-  mutate(sample = gsub(sample,pattern = '.merged.sorted.clean$',replacement = ""))
-
+df <- df %>%
+  # filter(grepl(sample,pattern = '.merged.sorted$')) %>%
+  # mutate(sample = gsub(sample,pattern = '.merged.sorted$',replacement = ""))
+  # filter(grepl(sample,pattern = '.merged.sorted.clean$')) %>%
+  # mutate(sample = gsub(sample,pattern = '.merged.sorted.clean$',replacement = ""))
+  filter(!grepl(sample,pattern = 'merged')) %>%
+  mutate(sample = gsub(sample,pattern = '.sorted$',replacement = ""))
+  
+  
 # coverage
 p <- ggplot(df, aes(x=pos, y=cov)) +
   theme_bw() +
@@ -48,7 +53,7 @@ dat <- df %>%
 p <- ggplot(dat, aes(x=pos, y=cov)) +
   theme_bw() +
   geom_bar(stat="identity",fill='grey70',color='grey70',width = 1) +
-  geom_vline(xintercept = 2954, linetype="dashed",size=0.2,color = 'orangered') +
+  geom_vline(xintercept = 2954, linetype="dashed",linewidth=0.2,color = 'orangered') +
   facet_grid(method~sample,scales = 'free_y') 
 
 ggsave(filename = 'samples_coverage_zoom.pdf', plot = p, width = 400,height = 150,dpi = 300,units = 'mm',device = 'pdf')

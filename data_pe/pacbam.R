@@ -20,6 +20,7 @@ for(bam.folder in bfs){
   
   vcf <- data.frame(CHROM = 'SPIKE',
                     POS = 0,
+                    ID = '.',
                     REF = 'A',
                     ALT = 'G',
                     QUAL = '.',
@@ -55,11 +56,12 @@ for(bam.folder in bfs){
     
     message(bam)
     
-    pacbam.path <- '/home/casiraghi/Documents/unitn/darosio/pacbam/pacbam'
+    # pacbam.path <- '/home/casiraghi/Documents/unitn/darosio/pacbam/pacbam'
+    pacbam.path <- '/home/casiraghi/pacbam'
     
     out <- paste0('out=',file.path(bam.folder,'pileup'))
     
-    cmd <- paste0(pacbam.path,' bam=',bam,' fasta=',fasta,' vcf=',vcf.file,' bed=',bed.file,' mode=4',' threads=1 ',out)
+    cmd <- paste0(pacbam.path,' bam=',bam,' fasta=',fasta,' vcf=',vcf.file,' bed=',bed.file,' mbq=20 mrq=1 mdc=1 mode=4',' threads=4 ',out)
     
     system(cmd)
     
