@@ -49,7 +49,7 @@ for(bam.folder in bfs){
   
   write.table(bed,file = bed.file,sep = '\t',col.names = FALSE,row.names = FALSE,quote = FALSE)
   
-  bams <- list.files(bam.folder,pattern = '\\.sorted.bam$',full.names = TRUE)
+  bams <- list.files(bam.folder,pattern = '\\.bam$',full.names = TRUE)
   
   for(bam in bams){
     
@@ -65,5 +65,3 @@ for(bam.folder in bfs){
     
   }
 }
-
-
